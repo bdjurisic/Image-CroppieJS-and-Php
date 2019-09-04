@@ -84,7 +84,7 @@
             $('#imagePreviewModal'),
             $('#imageUpload'),
             $('#croppedImageData'),
-            {width: 400, height: 400},
+            {width: 400, height: 250},
             {width: 480, height: 480}
         )
     });

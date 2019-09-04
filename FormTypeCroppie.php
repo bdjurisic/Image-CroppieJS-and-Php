@@ -1,20 +1,24 @@
 <?php
-    $valid_extensions = array('jpeg', 'jpg', 'png'); // valid extensions
+
+    $valid_extensions = array ( IMAGETYPE_JPEG, IMAGETYPE_PNG ); // valid image types
     $path = 'uploads/'; // upload directory
-    if($_FILES['imageUpload'])
+
+    if ($_FILES['imageUpload'])
     {
         $img = $_FILES['imageUpload']['name'];
         $tmp = $_FILES['imageUpload']['tmp_name'];
-        $ext = strtolower(pathinfo($img, PATHINFO_EXTENSION));
-        $preImageName =  sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535));
-        $final_image = $preImageName.$img;
+        $type = exif_imagetype($_FILES['imageUpload']['tmp_name']);
 
-        if(in_array($ext, $valid_extensions))
+        if (in_array($type, $valid_extensions))
         {
-            $path = $path.strtolower($final_image);
+            $ext = strtolower(image_type_to_extension($type));
+            $preImageName = sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535));
+            $final_image = $preImageName . $img;
+
+            $path = $path . strtolower($final_image);
             $croppedImageData = $_POST['croppedImageData']; // Hidden input field
 
-            if (!preg_match("/\d+\/\d+\/\d+\/\d+/", $croppedImageData))
+            if (!preg_match("/^\d+\/\d+\/\d+\/\d+$/", $croppedImageData))
             {
                 echo 'Crop box is not valid!';
                 return;
@@ -31,11 +35,39 @@
                 return;
             }
 
-            $image_p = imagecreatetruecolor($cw, $ch);
-            $image = imagecreatefromjpeg($tmp);
+            list($w, $h) = getimagesize($tmp);
 
-            imagecopyresampled($image_p, $image, 0, 0, $cx1, $cy1, $cw, $ch, $cw, $ch);
-            imagejpeg($image_p, $path, 100);
+            if ($w < $cw)
+            {
+                $cw = $w;
+            }
+
+            if ($h < $ch)
+            {
+                $ch = $h;
+            }
+
+            $imageTrueColor = imagecreatetruecolor($cw, $ch);
+
+            if (IMAGETYPE_JPEG == $type)
+            {
+                $resampled = imagecreatefromjpeg($tmp);
+            }
+            else if (IMAGETYPE_PNG == $type)
+            {
+                $resampled = imagecreatefrompng($tmp);
+            }
+
+            imagecopyresampled($imageTrueColor, $resampled, 0, 0, $cx1, $cy1, $cw, $ch, $cw, $ch);
+
+            if (IMAGETYPE_JPEG == $type)
+            {
+                imagejpeg($imageTrueColor, $path, 100);
+            }
+            else if (IMAGETYPE_PNG == $type)
+            {
+                imagepng($imageTrueColor, $path, 9);
+            }
 
             echo "Uploaded!";
         }
